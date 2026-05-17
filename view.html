@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Buka Catatan — SecureNote</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body>
+
+  <div class="container">
+
+    <!-- HEADER -->
+    <header class="header">
+      <div class="header-inner">
+        <div class="logo">
+          <div class="logo-mark">
+            <svg viewBox="0 0 24 24">
+              <rect x="3" y="11" width="18" height="11" rx="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+          </div>
+          <div class="logo-text">SecureNote</div>
+        </div>
+        <div class="header-meta">Twofish CBC 128-bit</div>
+      </div>
+    </header>
+
+    <div class="fade-in">
+
+      <!-- BACK -->
+      <a href="index.html" class="back-btn">← Kembali ke Daftar</a>
+
+      <!-- NOTE NOT FOUND -->
+      <div id="notFound" style="display:none;">
+        <h2 class="section-title">Catatan Tidak Ditemukan</h2>
+        <p class="section-desc">Catatan yang kamu cari tidak ada atau sudah dihapus.</p>
+        <a href="index.html" class="btn btn-primary">Kembali ke Daftar</a>
+      </div>
+
+      <!-- NOTE FOUND -->
+      <div id="noteContent" style="display:none;">
+
+        <h2 class="section-title" id="noteTitle">—</h2>
+        <p class="section-desc" id="noteDate">—</p>
+
+        <!-- CIPHERTEXT -->
+        <p class="cipher-label">🔒 Data Terenkripsi (Ciphertext)</p>
+        <div class="cipher-box" id="cipherBox">—</div>
+
+        <div class="divider"></div>
+
+        <!-- FORM DEKRIPSI -->
+        <p class="section-desc">Masukkan kunci untuk membaca isi catatan.</p>
+
+        <div class="alert alert-error" id="alertError">
+          ⚠ <span id="alertErrorMsg">Kunci salah atau data tidak valid.</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Kunci Dekripsi</label>
+          <input type="password" class="form-input" id="inputKey" placeholder="Masukkan kunci rahasia..." />
+        </div>
+
+        <button class="btn btn-primary btn-full" onclick="decryptNote()">
+          🔓 Dekripsi &amp; Baca Catatan
+        </button>
+
+        <!-- HASIL DEKRIPSI -->
+        <div class="result-box" id="resultBox">
+          <div class="result-label">Decrypted Content</div>
+          <div class="result-title" id="resultTitle">—</div>
+          <div class="result-content" id="resultContent">—</div>
+          <div class="result-date" id="resultDate">—</div>
+        </div>
+
+        <!-- AKSI -->
+        <div class="note-actions" style="margin-top:24px;">
+          <button class="btn btn-danger" onclick="deleteNote()">🗑 Hapus Catatan</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="js/twofish.js"></script>
+  <script src="js/storage.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+    let note = null;
+
+    function formatDate(iso) {
+      const d = new Date(iso);
+      return d.toLocaleDateString('id-ID', {
+        day: '2-digit', month: 'long', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    }
+
+    function init() {
+      if (!id) return showNotFound();
+      note = Storage.getById(id);
+      if (!note) return showNotFound();
+
+      document.getElementById('noteTitle').textContent = note.title;
+      document.getElementById('noteDate').textContent = 'Dibuat pada ' + formatDate(note.createdAt);
+      document.getElementById('cipherBox').textContent = note.ciphertext;
+      document.getElementById('noteContent').style.display = 'block';
+    }
+
+    function showNotFound() {
+      document.getElementById('notFound').style.display = 'block';
+    }
+
+    function decryptNote() {
+      const key = document.getElementById('inputKey').value;
+
+      if (!key) {
+        showError('Kunci tidak boleh kosong.');
+        return;
+      }
+
+      const plaintext = Twofish.decrypt(note.ciphertext, key);
+
+      if (plaintext === null) {
+        showError('Kunci salah! Catatan tidak dapat didekripsi.');
+        document.getElementById('resultBox').classList.remove('visible');
+        return;
+      }
+
+      document.getElementById('alertError').classList.remove('visible');
+      document.getElementById('resultTitle').textContent = note.title;
+      document.getElementById('resultContent').textContent = plaintext;
+      document.getElementById('resultDate').textContent = 'Dibuat: ' + formatDate(note.createdAt);
+      document.getElementById('resultBox').classList.add('visible');
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('alertError');
+      document.getElementById('alertErrorMsg').textContent = msg;
+      el.classList.add('visible');
+    }
+
+    function deleteNote() {
+      if (confirm('Yakin ingin menghapus catatan ini? Tindakan ini tidak bisa dibatalkan.')) {
+        Storage.remove(id);
+        window.location.href = 'index.html';
+      }
+    }
+
+    // Submit dengan Enter
+    document.addEventListener('DOMContentLoaded', () => {
+      init();
+      document.getElementById('inputKey')?.addEventListener('keydown', e => {
+        if (e.key === 'Enter') decryptNote();
+      });
+    });
+  </script>
+
+</body>
+
+</html>

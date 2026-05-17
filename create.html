@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Buat Catatan — SecureNote</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body>
+
+  <div class="container">
+
+    <!-- HEADER -->
+    <header class="header">
+      <div class="header-inner">
+        <div class="logo">
+          <div class="logo-mark">
+            <svg viewBox="0 0 24 24">
+              <rect x="3" y="11" width="18" height="11" rx="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+          </div>
+          <div class="logo-text">SecureNote</div>
+        </div>
+        <div class="header-meta">Twofish CBC 128-bit</div>
+      </div>
+    </header>
+
+    <div class="fade-in">
+
+      <!-- BACK -->
+      <a href="index.html" class="back-btn">← Kembali ke Daftar</a>
+
+      <h2 class="section-title">Buat Catatan Baru</h2>
+      <p class="section-desc">Catatan akan dienkripsi secara otomatis menggunakan algoritma Twofish.</p>
+
+      <!-- ALERT -->
+      <div class="alert alert-error" id="alertError">
+        ⚠ <span id="alertErrorMsg">Terjadi kesalahan.</span>
+      </div>
+      <div class="alert alert-success" id="alertSuccess">
+        ✓ Catatan berhasil disimpan! Mengalihkan...
+      </div>
+
+      <!-- FORM -->
+      <div class="form-group">
+        <label class="form-label">Judul Catatan</label>
+        <input type="text" class="form-input" id="inputTitle" placeholder="Masukkan judul catatan..." maxlength="100" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Isi Catatan</label>
+        <textarea class="form-input" id="inputContent" placeholder="Tulis isi catatan di sini..."></textarea>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="form-group">
+        <label class="form-label">Kunci Enkripsi</label>
+        <input type="password" class="form-input" id="inputKey" placeholder="Masukkan kunci rahasia..." />
+        <p class="key-hint">🔑 Simpan kunci ini baik-baik. Tanpa kunci yang benar, catatan tidak bisa dibaca.</p>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Konfirmasi Kunci</label>
+        <input type="password" class="form-input" id="inputKeyConfirm" placeholder="Ulangi kunci rahasia..." />
+      </div>
+
+      <button class="btn btn-primary btn-full" id="btnSave" onclick="saveNote()">
+        🔒 Enkripsi &amp; Simpan Catatan
+      </button>
+
+    </div>
+  </div>
+
+  <script src="js/twofish.js"></script>
+  <script src="js/storage.js"></script>
+  <script>
+    function showError(msg) {
+      const el = document.getElementById('alertError');
+      document.getElementById('alertErrorMsg').textContent = msg;
+      el.classList.add('visible');
+      document.getElementById('alertSuccess').classList.remove('visible');
+    }
+
+    function showSuccess() {
+      document.getElementById('alertSuccess').classList.add('visible');
+      document.getElementById('alertError').classList.remove('visible');
+    }
+
+    function saveNote() {
+      const title = document.getElementById('inputTitle').value.trim();
+      const content = document.getElementById('inputContent').value.trim();
+      const key = document.getElementById('inputKey').value;
+      const keyConf = document.getElementById('inputKeyConfirm').value;
+
+      // Validasi
+      if (!title) return showError('Judul catatan tidak boleh kosong.');
+      if (!content) return showError('Isi catatan tidak boleh kosong.');
+      if (!key) return showError('Kunci enkripsi tidak boleh kosong.');
+      if (key.length < 6) return showError('Kunci minimal 6 karakter.');
+      if (key !== keyConf) return showError('Konfirmasi kunci tidak cocok.');
+
+      // Enkripsi dengan Twofish
+      const ciphertext = Twofish.encrypt(content, key);
+
+      // Simpan ke LocalStorage
+      Storage.add({ title, ciphertext });
+
+      showSuccess();
+      setTimeout(() => { window.location.href = 'index.html'; }, 1200);
+    }
+
+    // Submit dengan Enter di field kunci
+    document.getElementById('inputKeyConfirm').addEventListener('keydown', e => {
+      if (e.key === 'Enter') saveNote();
+    });
+  </script>
+
+</body>
+
+</html>

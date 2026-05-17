@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SecureNote</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body>
+
+  <div class="container">
+
+    <!-- HEADER -->
+    <header class="header">
+      <div class="header-inner">
+        <div class="logo">
+          <div class="logo-mark">
+            <svg viewBox="0 0 24 24">
+              <rect x="3" y="11" width="18" height="11" rx="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+          </div>
+          <div class="logo-text">SecureNote</div>
+        </div>
+        <div class="header-meta">Twofish CBC 128-bit</div>
+      </div>
+    </header>
+
+    <!-- HERO -->
+    <div class="fade-in">
+      <h1 class="page-title">Catatan Aman Kamu</h1>
+      <p class="page-subtitle">Semua catatan dienkripsi dengan algoritma Twofish sebelum disimpan.</p>
+
+      <!-- NOTES LIST -->
+      <div class="notes-header">
+        <span class="notes-count" id="notesCount">Memuat...</span>
+        <a href="create.html" class="btn btn-primary">
+          ＋ Catatan Baru
+        </a>
+      </div>
+
+      <div id="notesList"></div>
+    </div>
+
+  </div>
+
+  <script src="js/twofish.js"></script>
+  <script src="js/storage.js"></script>
+  <script>
+    function formatDate(iso) {
+      const d = new Date(iso);
+      return d.toLocaleDateString('id-ID', {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    }
+
+    function render() {
+      const notes = Storage.getAll();
+      const list = document.getElementById('notesList');
+      const count = document.getElementById('notesCount');
+
+      count.textContent = `${notes.length} catatan tersimpan`;
+
+      if (notes.length === 0) {
+        list.innerHTML = `
+          <div class="empty-state fade-in">
+            <div class="empty-icon">No entries found</div>
+            <div class="empty-line"></div>
+            <p class="empty-text">Belum ada catatan tersimpan.<br>Buat catatan pertamamu sekarang.</p>
+            <a href="create.html" class="btn btn-primary">+ Catatan Baru</a>
+          </div>`;
+        return;
+      }
+
+      list.innerHTML = notes.map(note => `
+        <div class="note-card" onclick="window.location='view.html?id=${note.id}'">
+          <div class="note-card-left">
+            <div class="note-card-title">${escapeHtml(note.title)}</div>
+            <div class="note-card-meta">
+              <span class="note-card-badge">ENC</span>
+              <span>${formatDate(note.createdAt)}</span>
+            </div>
+          </div>
+          <span class="note-card-arrow">→</span>
+        </div>
+      `).join('');
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    render();
+  </script>
+
+</body>
+
+</html>
