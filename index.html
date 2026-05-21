@@ -12,7 +12,6 @@
 
   <div class="container">
 
-    <!-- HEADER -->
     <header class="header">
       <div class="header-inner">
         <div class="logo">
@@ -22,23 +21,27 @@
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
           </div>
-          <div class="logo-text">SecureNote</div>
+          <div class="logo-wordmark">SecureNote</div>
         </div>
-        <div class="header-meta">Twofish CBC 128-bit</div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div class="header-chip">
+            <span class="header-chip-dot"></span>
+            <span id="usernameDisplay">—</span>
+          </div>
+          <button class="btn btn-ghost" onclick="doLogout()" style="padding:6px 12px; font-size:12px;">
+            Keluar
+          </button>
+        </div>
       </div>
     </header>
 
-    <!-- HERO -->
     <div class="fade-in">
       <h1 class="page-title">Catatan Aman Kamu</h1>
       <p class="page-subtitle">Semua catatan dienkripsi dengan algoritma Twofish sebelum disimpan.</p>
 
-      <!-- NOTES LIST -->
       <div class="notes-header">
         <span class="notes-count" id="notesCount">Memuat...</span>
-        <a href="create.html" class="btn btn-primary">
-          ＋ Catatan Baru
-        </a>
+        <a href="create.html" class="btn btn-primary">+ Catatan Baru</a>
       </div>
 
       <div id="notesList"></div>
@@ -47,53 +50,71 @@
   </div>
 
   <script src="js/twofish.js"></script>
-  <script src="js/storage.js"></script>
+  <script src="js/app.js"></script>
   <script>
-    function formatDate(iso) {
-      const d = new Date(iso);
+    function formatDate(dateStr) {
+      const d = new Date(dateStr);
       return d.toLocaleDateString('id-ID', {
         day: '2-digit', month: 'short', year: 'numeric',
         hour: '2-digit', minute: '2-digit'
       });
     }
 
-    function render() {
-      const notes = Storage.getAll();
-      const list = document.getElementById('notesList');
-      const count = document.getElementById('notesCount');
-
-      count.textContent = `${notes.length} catatan tersimpan`;
-
-      if (notes.length === 0) {
-        list.innerHTML = `
-          <div class="empty-state fade-in">
-            <div class="empty-icon">No entries found</div>
-            <div class="empty-line"></div>
-            <p class="empty-text">Belum ada catatan tersimpan.<br>Buat catatan pertamamu sekarang.</p>
-            <a href="create.html" class="btn btn-primary">+ Catatan Baru</a>
-          </div>`;
-        return;
-      }
-
-      list.innerHTML = notes.map(note => `
-        <div class="note-card" onclick="window.location='view.html?id=${note.id}'">
-          <div class="note-card-left">
-            <div class="note-card-title">${escapeHtml(note.title)}</div>
-            <div class="note-card-meta">
-              <span class="note-card-badge">ENC</span>
-              <span>${formatDate(note.createdAt)}</span>
-            </div>
-          </div>
-          <span class="note-card-arrow">→</span>
-        </div>
-      `).join('');
-    }
-
     function escapeHtml(str) {
       return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
-    render();
+    async function init() {
+      // Cek session
+      const user = await checkAuth();
+      if (!user) return;
+
+      document.getElementById('usernameDisplay').textContent = user.username;
+
+      // Load catatan
+      const list = document.getElementById('notesList');
+      const count = document.getElementById('notesCount');
+
+      try {
+        const notes = await Storage.getAll();
+        count.textContent = `${notes.length} catatan tersimpan`;
+
+        if (notes.length === 0) {
+          list.innerHTML = `
+            <div class="empty-state fade-in">
+              <div class="empty-glyph">No entries found</div>
+              <div class="empty-rule"></div>
+              <p class="empty-text">Belum ada catatan tersimpan.<br>Buat catatan pertamamu sekarang.</p>
+              <a href="create.html" class="btn btn-primary">+ Catatan Baru</a>
+            </div>`;
+          return;
+        }
+
+        list.innerHTML = notes.map(note => `
+          <div class="note-card" onclick="window.location='view.html?id=${note.id}'">
+            <div class="note-card-left">
+              <div class="note-card-title">${escapeHtml(note.title)}</div>
+              <div class="note-card-meta">
+                <span class="badge-enc">ENC</span>
+                <span>${formatDate(note.created_at)}</span>
+              </div>
+            </div>
+            <span class="note-card-arrow">→</span>
+          </div>
+        `).join('');
+
+      } catch (err) {
+        count.textContent = 'Gagal memuat';
+        list.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-glyph">Connection Error</div>
+            <div class="empty-rule"></div>
+            <p class="empty-text">Tidak dapat terhubung ke server.<br>Pastikan XAMPP sudah berjalan.</p>
+          </div>`;
+      }
+    }
+
+    init();
   </script>
 
 </body>

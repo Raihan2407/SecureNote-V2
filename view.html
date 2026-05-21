@@ -12,7 +12,6 @@
 
   <div class="container">
 
-    <!-- HEADER -->
     <header class="header">
       <div class="header-inner">
         <div class="logo">
@@ -22,50 +21,62 @@
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
           </div>
-          <div class="logo-text">SecureNote</div>
+          <div class="logo-wordmark">SecureNote</div>
         </div>
-        <div class="header-meta">Twofish CBC 128-bit</div>
+        <div class="header-chip">
+          <span class="header-chip-dot"></span>
+          Twofish CBC 128-bit
+        </div>
       </div>
     </header>
 
     <div class="fade-in">
 
-      <!-- BACK -->
       <a href="index.html" class="back-btn">← Kembali ke Daftar</a>
 
-      <!-- NOTE NOT FOUND -->
+      <!-- NOT FOUND -->
       <div id="notFound" style="display:none;">
         <h2 class="section-title">Catatan Tidak Ditemukan</h2>
         <p class="section-desc">Catatan yang kamu cari tidak ada atau sudah dihapus.</p>
         <a href="index.html" class="btn btn-primary">Kembali ke Daftar</a>
       </div>
 
-      <!-- NOTE FOUND -->
+      <!-- NOTE CONTENT -->
       <div id="noteContent" style="display:none;">
 
         <h2 class="section-title" id="noteTitle">—</h2>
         <p class="section-desc" id="noteDate">—</p>
 
-        <!-- CIPHERTEXT -->
-        <p class="cipher-label">🔒 Data Terenkripsi (Ciphertext)</p>
+        <p class="cipher-label">Data Terenkripsi (Ciphertext)</p>
         <div class="cipher-box" id="cipherBox">—</div>
 
         <div class="divider"></div>
 
-        <!-- FORM DEKRIPSI -->
         <p class="section-desc">Masukkan kunci untuk membaca isi catatan.</p>
 
         <div class="alert alert-error" id="alertError">
-          ⚠ <span id="alertErrorMsg">Kunci salah atau data tidak valid.</span>
+          <span id="alertErrorMsg">Kunci salah atau data tidak valid.</span>
+        </div>
+        <div class="alert alert-success" id="alertSuccess">
+          <span id="alertSuccessMsg">Catatan berhasil diperbarui.</span>
         </div>
 
         <div class="form-group">
           <label class="form-label">Kunci Dekripsi</label>
-          <input type="password" class="form-input" id="inputKey" placeholder="Masukkan kunci rahasia..." />
+          <div class="input-wrap">
+            <input type="password" class="form-input mono-input" id="inputKey"
+              placeholder="Masukkan kunci rahasia..." />
+            <button class="toggle-eye" type="button" onclick="togglePassword('inputKey', this)" tabindex="-1">
+              <svg viewBox="0 0 24 24">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         <button class="btn btn-primary btn-full" onclick="decryptNote()">
-          🔓 Dekripsi &amp; Baca Catatan
+          Dekripsi &amp; Baca Catatan
         </button>
 
         <!-- HASIL DEKRIPSI -->
@@ -76,9 +87,47 @@
           <div class="result-date" id="resultDate">—</div>
         </div>
 
+        <!-- FORM EDIT -->
+        <div id="editBox" style="display:none; margin-top:20px;">
+          <div class="divider"></div>
+          <p class="cipher-label">Edit Catatan</p>
+
+          <div class="form-group">
+            <label class="form-label">Judul Catatan</label>
+            <input type="text" class="form-input" id="editTitle" maxlength="255" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Isi Catatan</label>
+            <textarea class="form-input" id="editContent" style="min-height:140px;"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Kunci Enkripsi Baru</label>
+            <div class="input-wrap">
+              <input type="password" class="form-input mono-input" id="editKey"
+                placeholder="Kosongkan untuk pakai kunci yang sama..." />
+              <button class="toggle-eye" type="button" onclick="togglePassword('editKey', this)" tabindex="-1">
+                <svg viewBox="0 0 24 24">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </button>
+            </div>
+            <p class="key-hint">Kosongkan jika ingin tetap menggunakan kunci yang sama.</p>
+          </div>
+
+          <div style="display:flex; gap:10px;">
+            <button class="btn btn-primary" style="flex:1; justify-content:center;" onclick="saveEdit()">Simpan
+              Perubahan</button>
+            <button class="btn btn-ghost" onclick="cancelEdit()">Batal</button>
+          </div>
+        </div>
+
         <!-- AKSI -->
-        <div class="note-actions" style="margin-top:24px;">
-          <button class="btn btn-danger" onclick="deleteNote()">🗑 Hapus Catatan</button>
+        <div class="note-actions" id="noteActions" style="display:none;">
+          <button class="btn btn-ghost" onclick="startEdit()">Edit Catatan</button>
+          <button class="btn btn-danger" onclick="deleteNote()">Hapus Catatan</button>
         </div>
 
       </div>
@@ -86,72 +135,143 @@
   </div>
 
   <script src="js/twofish.js"></script>
-  <script src="js/storage.js"></script>
+  <script src="js/app.js"></script>
   <script>
     const params = new URLSearchParams(window.location.search);
-    const id = params.get('id');
+    const id = parseInt(params.get('id'));
     let note = null;
+    let currentPlaintext = '';
+    let currentKey = '';
 
-    function formatDate(iso) {
-      const d = new Date(iso);
+    function formatDate(dateStr) {
+      const d = new Date(dateStr);
       return d.toLocaleDateString('id-ID', {
         day: '2-digit', month: 'long', year: 'numeric',
         hour: '2-digit', minute: '2-digit'
       });
     }
 
-    function init() {
-      if (!id) return showNotFound();
-      note = Storage.getById(id);
-      if (!note) return showNotFound();
+    function togglePassword(inputId, btn) {
+      const input = document.getElementById(inputId);
+      input.type = input.type === 'password' ? 'text' : 'password';
+      btn.style.opacity = input.type === 'text' ? '1' : '0.4';
+    }
 
-      document.getElementById('noteTitle').textContent = note.title;
-      document.getElementById('noteDate').textContent = 'Dibuat pada ' + formatDate(note.createdAt);
-      document.getElementById('cipherBox').textContent = note.ciphertext;
-      document.getElementById('noteContent').style.display = 'block';
+    async function init() {
+      if (!id || id <= 0) return showNotFound();
+      try {
+        note = await Storage.getById(id);
+        if (!note) return showNotFound();
+
+        document.getElementById('noteTitle').textContent = note.title;
+        document.getElementById('noteDate').textContent = 'Dibuat pada ' + formatDate(note.created_at);
+        document.getElementById('cipherBox').textContent = note.ciphertext;
+        document.getElementById('noteContent').style.display = 'block';
+      } catch (e) {
+        showNotFound();
+      }
     }
 
     function showNotFound() {
       document.getElementById('notFound').style.display = 'block';
     }
 
+    function showError(msg) {
+      document.getElementById('alertErrorMsg').textContent = msg;
+      document.getElementById('alertError').classList.add('visible');
+      document.getElementById('alertSuccess').classList.remove('visible');
+    }
+
+    function showSuccess(msg) {
+      document.getElementById('alertSuccessMsg').textContent = msg;
+      document.getElementById('alertSuccess').classList.add('visible');
+      document.getElementById('alertError').classList.remove('visible');
+      setTimeout(() => document.getElementById('alertSuccess').classList.remove('visible'), 3000);
+    }
+
     function decryptNote() {
       const key = document.getElementById('inputKey').value;
-
-      if (!key) {
-        showError('Kunci tidak boleh kosong.');
-        return;
-      }
+      if (!key) return showError('Kunci tidak boleh kosong.');
 
       const plaintext = Twofish.decrypt(note.ciphertext, key);
-
       if (plaintext === null) {
         showError('Kunci salah! Catatan tidak dapat didekripsi.');
         document.getElementById('resultBox').classList.remove('visible');
+        document.getElementById('noteActions').style.display = 'none';
         return;
       }
+
+      currentPlaintext = plaintext;
+      currentKey = key;
 
       document.getElementById('alertError').classList.remove('visible');
       document.getElementById('resultTitle').textContent = note.title;
       document.getElementById('resultContent').textContent = plaintext;
-      document.getElementById('resultDate').textContent = 'Dibuat: ' + formatDate(note.createdAt);
+      document.getElementById('resultDate').textContent = 'Dibuat: ' + formatDate(note.created_at);
+      document.getElementById('resultBox').classList.add('visible');
+      document.getElementById('noteActions').style.display = 'flex';
+    }
+
+    function startEdit() {
+      document.getElementById('editTitle').value = note.title;
+      document.getElementById('editContent').value = currentPlaintext;
+      document.getElementById('editKey').value = '';
+      document.getElementById('editBox').style.display = 'block';
+      document.getElementById('noteActions').style.display = 'none';
+      document.getElementById('resultBox').classList.remove('visible');
+      document.getElementById('editTitle').focus();
+    }
+
+    function cancelEdit() {
+      document.getElementById('editBox').style.display = 'none';
+      document.getElementById('noteActions').style.display = 'flex';
       document.getElementById('resultBox').classList.add('visible');
     }
 
-    function showError(msg) {
-      const el = document.getElementById('alertError');
-      document.getElementById('alertErrorMsg').textContent = msg;
-      el.classList.add('visible');
-    }
+    async function saveEdit() {
+      const newTitle = document.getElementById('editTitle').value.trim();
+      const newContent = document.getElementById('editContent').value.trim();
+      const newKey = document.getElementById('editKey').value || currentKey;
 
-    function deleteNote() {
-      if (confirm('Yakin ingin menghapus catatan ini? Tindakan ini tidak bisa dibatalkan.')) {
-        Storage.remove(id);
-        window.location.href = 'index.html';
+      if (!newTitle) return showError('Judul tidak boleh kosong.');
+      if (!newContent) return showError('Isi catatan tidak boleh kosong.');
+      if (newKey.length < 6) return showError('Kunci minimal 6 karakter.');
+
+      try {
+        const newCiphertext = Twofish.encrypt(newContent, newKey);
+        await Storage.update(id, newTitle, newCiphertext);
+
+        // Update lokal
+        note.title = newTitle;
+        note.ciphertext = newCiphertext;
+        currentPlaintext = newContent;
+        currentKey = newKey;
+
+        document.getElementById('noteTitle').textContent = newTitle;
+        document.getElementById('cipherBox').textContent = newCiphertext;
+        document.getElementById('resultTitle').textContent = newTitle;
+        document.getElementById('resultContent').textContent = newContent;
+
+        document.getElementById('editBox').style.display = 'none';
+        document.getElementById('resultBox').classList.add('visible');
+        document.getElementById('noteActions').style.display = 'flex';
+
+        showSuccess('Catatan berhasil diperbarui.');
+      } catch (err) {
+        showError('Gagal memperbarui: ' + err.message);
       }
     }
 
-    // Submit dengan Enter
+    async function deleteNote() {
+      if (!confirm('Yakin ingin menghapus catatan ini? Tindakan ini tidak bisa dibatalkan.')) return;
+      try {
+        await Storage.remove(id);
+        window.location.href = 'index.html';
+      } catch (err) {
+        showError('Gagal menghapus: ' + err.message);
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
       init();
       document.getElementById('inputKey')?.addEventListener('keydown', e => {

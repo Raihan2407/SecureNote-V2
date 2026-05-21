@@ -12,7 +12,6 @@
 
   <div class="container">
 
-    <!-- HEADER -->
     <header class="header">
       <div class="header-inner">
         <div class="logo">
@@ -22,32 +21,32 @@
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
           </div>
-          <div class="logo-text">SecureNote</div>
+          <div class="logo-wordmark">SecureNote</div>
         </div>
-        <div class="header-meta">Twofish CBC 128-bit</div>
+        <div class="header-chip">
+          <span class="header-chip-dot"></span>
+          Twofish CBC 128-bit
+        </div>
       </div>
     </header>
 
     <div class="fade-in">
 
-      <!-- BACK -->
       <a href="index.html" class="back-btn">← Kembali ke Daftar</a>
 
       <h2 class="section-title">Buat Catatan Baru</h2>
       <p class="section-desc">Catatan akan dienkripsi secara otomatis menggunakan algoritma Twofish.</p>
 
-      <!-- ALERT -->
       <div class="alert alert-error" id="alertError">
-        ⚠ <span id="alertErrorMsg">Terjadi kesalahan.</span>
+        <span id="alertErrorMsg">Terjadi kesalahan.</span>
       </div>
       <div class="alert alert-success" id="alertSuccess">
-        ✓ Catatan berhasil disimpan! Mengalihkan...
+        Catatan berhasil disimpan! Mengalihkan...
       </div>
 
-      <!-- FORM -->
       <div class="form-group">
         <label class="form-label">Judul Catatan</label>
-        <input type="text" class="form-input" id="inputTitle" placeholder="Masukkan judul catatan..." maxlength="100" />
+        <input type="text" class="form-input" id="inputTitle" placeholder="Masukkan judul catatan..." maxlength="255" />
       </div>
 
       <div class="form-group">
@@ -59,61 +58,116 @@
 
       <div class="form-group">
         <label class="form-label">Kunci Enkripsi</label>
-        <input type="password" class="form-input" id="inputKey" placeholder="Masukkan kunci rahasia..." />
-        <p class="key-hint">🔑 Simpan kunci ini baik-baik. Tanpa kunci yang benar, catatan tidak bisa dibaca.</p>
+        <div class="input-wrap">
+          <input type="password" class="form-input mono-input" id="inputKey" placeholder="Masukkan kunci rahasia..."
+            oninput="checkStrength(this.value)" />
+          <button class="toggle-eye" type="button" onclick="togglePassword('inputKey', this)" tabindex="-1">
+            <svg viewBox="0 0 24 24">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
+        </div>
+        <div class="strength-bar">
+          <div class="strength-segment" id="seg1"></div>
+          <div class="strength-segment" id="seg2"></div>
+          <div class="strength-segment" id="seg3"></div>
+        </div>
+        <p class="strength-label" id="strengthLabel">Masukkan kunci untuk melihat kekuatannya</p>
       </div>
 
       <div class="form-group">
         <label class="form-label">Konfirmasi Kunci</label>
-        <input type="password" class="form-input" id="inputKeyConfirm" placeholder="Ulangi kunci rahasia..." />
+        <div class="input-wrap">
+          <input type="password" class="form-input mono-input" id="inputKeyConfirm"
+            placeholder="Ulangi kunci rahasia..." />
+          <button class="toggle-eye" type="button" onclick="togglePassword('inputKeyConfirm', this)" tabindex="-1">
+            <svg viewBox="0 0 24 24">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
+        </div>
+        <p class="key-hint">Simpan kunci ini baik-baik. Tanpa kunci yang benar, catatan tidak bisa dibaca.</p>
       </div>
 
       <button class="btn btn-primary btn-full" id="btnSave" onclick="saveNote()">
-        🔒 Enkripsi &amp; Simpan Catatan
+        Enkripsi &amp; Simpan Catatan
       </button>
 
     </div>
   </div>
 
   <script src="js/twofish.js"></script>
-  <script src="js/storage.js"></script>
+  <script src="js/app.js"></script>
   <script>
+    function togglePassword(inputId, btn) {
+      const input = document.getElementById(inputId);
+      input.type = input.type === 'password' ? 'text' : 'password';
+      btn.style.opacity = input.type === 'text' ? '1' : '0.4';
+    }
+
+    function checkStrength(val) {
+      const segs = ['seg1', 'seg2', 'seg3'].map(id => document.getElementById(id));
+      const lbl = document.getElementById('strengthLabel');
+      segs.forEach(s => s.className = 'strength-segment');
+      lbl.className = 'strength-label';
+
+      if (!val) { lbl.textContent = 'Masukkan kunci untuk melihat kekuatannya'; return; }
+
+      const score = (val.length >= 8 ? 1 : 0) + (val.length >= 12 ? 1 : 0)
+        + (/[A-Z]/.test(val) && /[a-z]/.test(val) ? 1 : 0)
+        + (/[0-9]/.test(val) ? 1 : 0)
+        + (/[^A-Za-z0-9]/.test(val) ? 1 : 0);
+
+      if (score <= 2) {
+        segs[0].classList.add('weak');
+        lbl.classList.add('weak'); lbl.textContent = 'Lemah — tambahkan angka atau simbol';
+      } else if (score <= 3) {
+        segs[0].classList.add('medium'); segs[1].classList.add('medium');
+        lbl.classList.add('medium'); lbl.textContent = 'Sedang — bisa lebih kuat lagi';
+      } else {
+        segs.forEach(s => s.classList.add('strong'));
+        lbl.classList.add('strong'); lbl.textContent = 'Kuat — kunci sudah aman';
+      }
+    }
+
     function showError(msg) {
-      const el = document.getElementById('alertError');
       document.getElementById('alertErrorMsg').textContent = msg;
-      el.classList.add('visible');
+      document.getElementById('alertError').classList.add('visible');
       document.getElementById('alertSuccess').classList.remove('visible');
     }
 
-    function showSuccess() {
-      document.getElementById('alertSuccess').classList.add('visible');
-      document.getElementById('alertError').classList.remove('visible');
-    }
-
-    function saveNote() {
+    async function saveNote() {
       const title = document.getElementById('inputTitle').value.trim();
       const content = document.getElementById('inputContent').value.trim();
       const key = document.getElementById('inputKey').value;
       const keyConf = document.getElementById('inputKeyConfirm').value;
+      const btn = document.getElementById('btnSave');
 
-      // Validasi
       if (!title) return showError('Judul catatan tidak boleh kosong.');
       if (!content) return showError('Isi catatan tidak boleh kosong.');
       if (!key) return showError('Kunci enkripsi tidak boleh kosong.');
       if (key.length < 6) return showError('Kunci minimal 6 karakter.');
       if (key !== keyConf) return showError('Konfirmasi kunci tidak cocok.');
 
-      // Enkripsi dengan Twofish
-      const ciphertext = Twofish.encrypt(content, key);
+      btn.disabled = true;
+      btn.textContent = 'Menyimpan...';
 
-      // Simpan ke LocalStorage
-      Storage.add({ title, ciphertext });
+      try {
+        const ciphertext = Twofish.encrypt(content, key);
+        await Storage.add({ title, ciphertext });
 
-      showSuccess();
-      setTimeout(() => { window.location.href = 'index.html'; }, 1200);
+        document.getElementById('alertSuccess').classList.add('visible');
+        document.getElementById('alertError').classList.remove('visible');
+        setTimeout(() => { window.location.href = 'index.html'; }, 1200);
+      } catch (err) {
+        showError('Gagal menyimpan: ' + err.message);
+        btn.disabled = false;
+        btn.textContent = 'Enkripsi & Simpan Catatan';
+      }
     }
 
-    // Submit dengan Enter di field kunci
     document.getElementById('inputKeyConfirm').addEventListener('keydown', e => {
       if (e.key === 'Enter') saveNote();
     });
